@@ -144,6 +144,27 @@ $(function(){
         }
 
         // 发起注册请求
+        var params = {
+        "mobile": mobile,
+        "smscode": smscode,
+        "password": password,
+    }
+
+    $.ajax({
+        url:"/passport/register",
+        type: "post",
+        data: JSON.stringify(params),
+        contentType: "application/json",
+        success: function (resp) {
+            if (resp.errno == "0"){
+                // 刷新当前界面
+                location.reload()
+            }else {
+                $("#register-password-err").html(resp.errmsg)
+                $("#register-password-err").show()
+            }
+        }
+    })
 
     })
 })
@@ -152,6 +173,13 @@ var imageCodeId = ""
 
 // TODO 生成一个图片验证码的编号，并设置页面中图片验证码img标签的src属性
 function generateImageCode() {
+    // 图片验证码请求/passports/image_code?image_Code=xxxxxxxxx
+    //生成随机码
+    imageCodeId = generateUUID()
+    //生成url
+    var url = '/passport/image_code?image_Code='+imageCodeId
+    //给图片验证码img设置src属性
+    $('.get_pic_code').attr('src',url)
 
 }
 
@@ -175,7 +203,55 @@ function sendSMSCode() {
     }
 
     // TODO 发送短信验证码
-}
+    var params = {
+        'mobile':mobile,
+        'image_code':imageCode,
+        'image_code_id':imageCodeId
+    }
+    $.ajax({
+        //请求地址
+        url:'/passport/sms_code',
+        //请求方式
+        type:'post',
+        //请求参数
+        data:JSON.stringify(params),
+        //数据类型
+        content_type:'application/json',
+        success: function (response) {
+            if (response.errno == "0") {
+                // 代表发送成功
+                var num = 60
+                var t = setInterval(function () {
+
+                    if (num == 1) {
+                        // 代表倒计时结束
+                        // 清除倒计时
+                        clearInterval(t)
+
+                        // 设置显示内容
+                        $(".get_code").html("点击获取验证码")
+                        // 添加点击事件
+                        $(".get_code").attr("onclick", "sendSMSCode();");
+                    }else {
+                        num -= 1
+                        // 设置 a 标签显示的内容
+                        $(".get_code").html(num + "秒")
+                    }
+                }, 1000)
+            }else {
+                // 代表发送失败
+                // 表示后端出现了错误，可以将错误信息展示到前端页面中
+                $("#register-sms-code-err").html(resp.errmsg);
+                $("#register-sms-code-err").show();
+                // 将点击按钮的onclick事件函数恢复回去
+                $(".get_code").attr("onclick", "sendSMSCode();");
+                // 如果错误码是4004，代表验证码错误，重新生成验证码
+                if (resp.errno == "4004") {
+                    generateImageCode()
+            }
+        }
+            }
+    })
 
 // 调用该函数模拟点击左侧按钮
 function fnChangeMenu(n) {
